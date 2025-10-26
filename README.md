@@ -18,3 +18,27 @@ It analyzes job descriptions, generates tailored CVs dynamically as PDFs, and su
 
 ## 🧩 Project Structure
 
+## ⚙️ Setup Instructions
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/<your-username>/CrewAI_CV_Project.git
+cd CrewAI_CV_Project
+
+
+
+2. Create and Activate Virtual Environment
+# Create virtual environment
+python -m venv venv
+
+# Activate (Windows)
+venv\Scripts\activate
+
+# Activate (Linux/Mac)
+source venv/bin/activate
+
+3. Install Dependencies
+pip install -r requirements.txt
+
+4. Run the Application
+uvicorn backend.app:app --reload --port 8000
