@@ -1,0 +1,131 @@
+```json
+{
+  "name": "Motaouakel El Maimouni",
+  "email": "Motaouakelmaimo19@gmail.com",
+  "phone": "+212 609247261",
+  "summary": "Highly motivated AI Master student and aspiring Solution Architect with a strong foundation in AI, Data Science, and ERP implementation. Proven ability to develop and deploy intelligent IT solutions, automate workflows, and optimize business processes. Eager to apply technical skills and problem-solving abilities to contribute to the commercial development of innovative technologies.",
+  "experience": [
+    {
+      "title": "AI Master Student",
+      "company": "Faculty of Sciences and Technologies of Tangier (FSTT)",
+      "start": "2023-09-01 (estimated)",
+      "end": "Present",
+      "description": "Co-developing strategic AI solutions for intelligent automation and workflow optimization. Supporting deployment architecture, integration with existing systems, and data flow design.",
+      "location": ""
+    },
+    {
+      "title": "ERP Odoo Implementation Intern",
+      "company": "Cloud Marketing HUB",
+      "start": "2024-04-15",
+      "end": "2024-09-01",
+      "description": "Implemented Odoo ERP on a local server for a multi-company holding. Designed internal exchange platforms and automated key workflows (purchase, sales, inventory). Worked on server-side deployment and security access for cloud ERP.",
+      "location": ""
+    },
+    {
+      "title": "Check-In and Boarding Agent",
+      "company": "Swissport – Tangier Ibn Battouta Airport",
+      "start": "2023-07-01",
+      "end": "2023-10-01",
+      "description": "Two-month role with certification in check-in and boarding. Ensured smooth passenger flow and compliance with aviation regulations.",
+      "location": ""
+    },
+    {
+      "title": "Designer freelance et vendeur sur Redbubble",
+      "company": "Redbubble",
+      "start": "2022-01-01 (estimated)",
+      "end": "2023-12-31 (estimated)",
+      "description": "Created and sold original designs online, managing the full process from concept to sale.",
+      "location": ""
+    }
+  ],
+  "skills": [
+    "AI",
+    "Data Science",
+    "ERP Implementation",
+    "Server Management",
+    "Intelligent IT Solutions",
+    "Software Engineering",
+    "Cloud Solutions",
+    "Odoo ERP",
+    "Automation",
+    "Problem-solving",
+    "Workflow Optimization",
+    "Docker",
+    "Git/GitHub",
+    "Ubuntu Server",
+    "Local & Cloud Deployments",
+    "CI/CD",
+    "VirtualBox",
+    "IT Infrastructure",
+    "Static IP config",
+    "Firewall Settings",
+    "Odoo Server Management",
+    "Networking Fundamentals",
+    "Supervised Learning",
+    "CNNs",
+    "NLP RAG",
+    "Simple & Multi-agent Systems",
+    "AI automations (Langchain, Langgraph, n8n)",
+    "Feature Engineering",
+    "ETL & ELT",
+    "Talend Open Source",
+    "Kafka",
+    "Spark Streaming",
+    "Hadoop",
+    "YARN",
+    "React Native",
+    "Flutter",
+    "Flask",
+    "Django",
+    "Node-red",
+    "SQL",
+    "SQL Server",
+    "MongoDB",
+    "UML",
+    "Python",
+    "PostgreSQL",
+    "PySpark",
+    "Java",
+    "Communication",
+    "Teamwork",
+    "Adaptability",
+    "Time management",
+    "Attention to detail"
+  ],
+  "education": [
+    {
+      "degree": "Master’s Student in Artificial Intelligence and Data Science – 2nd Year",
+      "institution": "Faculty of Sciences and Technologies of Tangier (FSTT)",
+      "year": "2025 (estimated)"
+    },
+    {
+      "degree": "Bachelor’s Degree in Science and Technology – Major: Software Application Development Engineering",
+      "institution": "Faculté des Sciences et Technologies de Tanger",
+      "year": "2024 (estimated)"
+    },
+    {
+      "degree": "DEUST – University Diploma in Science and Technology",
+      "institution": "Faculté des Sciences et Technologies de Tanger",
+      "year": "2023 (estimated)"
+    },
+    {
+      "degree": "Baccalaureate in Mathematical Sciences",
+      "institution": "Moulay Youssef Technical High School",
+      "year": null
+    }
+  ],
+  "languages": [
+    "English: Very Good",
+    "French: Very Good",
+    "Arabic: Native",
+    "Spanish: Beginner"
+  ],
+  "certifications": [
+    "Introduction to Data Analysis – IBM"
+  ],
+  "other": {
+    "interests": "Human Development Project, Supporting abandoned and underprivileged children, Community-focused activities",
+    "linkedin": "https://www.linkedin.com/in/motaouakel-el-maimouni/",
+    "website": "https://portfolio-omega-flame-czes73vxmi.vercel.app/"
+  }
+}

@@ -1,0 +1,16 @@
+```json
+{
+  "summary": "This is a short, intensive sales internship at a French Web3 platform, Access Equity, focusing on business development within the startup and private equity space. The intern will support the Sales Director in prospecting, client meetings, partnership development, and market analysis.",
+  "purpose": "To assist the Sales Director in the commercial development of Access Equity's Web3 solution by prospecting clients, participating in sales meetings, developing strategic partnerships, and conducting market research.",
+  "seniority": "Junior",
+  "required_skills": [
+    "Student in business school or economics/management faculty",
+    "Interest in private equity, fintech, or Web3",
+    "Strong interpersonal skills and a taste for commercial challenges",
+    "Ability to integrate quickly and be operational rapidly",
+    "Autonomy, curiosity, and entrepreneurial spirit"
+  ],
+  "local_context": "The role is located in Paris, France (75003) with the possibility of partial remote work. It's a 'stage', which is a French term for internship.",
+  "hiring_advice": "This is a good opportunity for a student looking to gain practical experience in sales and business development within the rapidly growing Web3 and private equity sectors. Highlight your communication skills, adaptability, and genuine interest in the industry during the application process."
+}
+```

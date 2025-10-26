@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Generator Pro</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">📄 CV Generator Pro</div>
+            <nav class="nav">
+                <button class="nav-btn active" onclick="showSection('settings')">⚙️ Paramètres</button>
+                <button class="nav-btn" onclick="showSection('profile')">👤 Profil</button>
+                <button class="nav-btn" onclick="showSection('generate')">✨ Générer</button>
+                <button class="nav-btn" onclick="showSection('results')">📊 Résultats</button>
+            </nav>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="section active">
+            <div class="card">
+                <h2 class="card-title">Configuration des API Keys</h2>
+                <div class="api-grid">
+                    <div class="api-card">
+                        <div class="input-group">
+                            <label class="input-label">🤖 Gemini API Key</label>
+                            <input type="password" class="input-field" id="gemini-key" placeholder="Entrez votre clé API Gemini">
+                        </div>
+                    </div>
+       
+                    <div class="api-card">
+                        <div class="input-group">
+                            <label class="input-label">🔮 OpenAI API Ke y</label>
+                            <input type="password" class="input-field" id="openai-key" placeholder="Entrez votre clé API OpenAI">
+                        </div>
+                    </div>
+                    <div class="api-card">
+                        <div class="input-group">
+                            <label class="input-label">⚡ Anthropic API Key</label>
+                            <input type="password" class="input-field" id="anthropic-key" placeholder="Entrez votre clé API Anthropic">
+                        </div>
+                    </div>
+                </div>
+               <h2 class="card-title">Web search API Keys</h2>
+               <div class="api-grid">
+                    <div class="api-card">
+                        <div class="input-group">
+                            <label class="input-label">🔍 SerpAPI Key</label>
+                            <input type="password" class="input-field" id="serpapi-key" placeholder="Entrez votre clé API SerpAPI">
+                        </div>
+                    </div>
+       
+                    <div class="api-card">
+                        <div class="input-group">
+                            <label class="input-label">🌐 Custom Search API Key</label>
+                            <input type="password" class="input-field" id="customsearch-key" placeholder="Entrez votre clé API Custom Search">
+                        </div>
+                    </div>
+
+               </div>
+
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="saveAPIKeys()">💾 Sauvegarder</button>
+                    <button class="btn btn-danger" onclick="resetAPIKeys()">🔄 Réinitialiser</button>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- Profile Section -->
+        <div id="profile" class="section">
+            <div class="card">
+                <h2 class="card-title">Informations de Profil</h2>
+                
+                <div class="input-group">
+                    <label class="input-label">📎 CV Existant</label>
+                    <div class="drop-zone" id="cv-drop-zone" onclick="document.getElementById('cv-file').click()">
+                        <div class="drop-zone-icon">📄</div>
+                        <div class="drop-zone-text">Cliquez ou glissez votre CV ici</div>
+                        <div class="file-name" id="cv-file-name"></div>
+                    </div>
+                    <input type="file" id="cv-file" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleCVUpload(this)">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">✍️ Description Personnelle Détaillée</label>
+                    <textarea class="input-field" id="personal-description" placeholder="Décrivez votre parcours, vos compétences, vos expériences..." maxlength="2000" oninput="updateCharCount()"></textarea>
+                    <div class="character-count" id="char-count">0 / 2000 caractères</div>
+                </div>
+
+                <button class="btn btn-primary btn-block" onclick="saveProfile()">💾 Sauvegarder le Profil</button>
+            </div>
+        </div>
+
+
+
+
+
+
+        <!-- Generate Section -->
+        <div id="generate" class="section">
+            <div class="card">
+                <h2 class="card-title">Générer un CV</h2>
+                
+  
+
+<div class="input-group">
+    <label class="input-label">📋 Description de Poste</label>
+    <textarea class="input-field" id="job-file-name" placeholder="Collez la description de poste ici..." maxlength="2000" oninput="updateJobCharCount()"></textarea>
+    <div class="character-count" id="job-char-count">0 / 2000 caractères</div>
+</div>
+
+
+
+                <div style="text-align: center; margin: 20px 0; color: var(--gray); font-weight: 600;">OU</div>
+
+                <div class="input-group">
+                    <label class="input-label">🔗 Lien vers l'Offre d'Emploi</label>
+                    <input type="url" class="input-field" id="job-link" placeholder="https://example.com/job-posting">
+                </div>
+
+
+
+<!-- Après la ligne du job-link -->
+
+<div style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05)); border-radius: 16px; border: 1px solid var(--border-color);">
+    <h3 style="margin-bottom: 20px; color: var(--white); font-size: 18px;">🎨 Personnalisation du CV</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div class="input-group">
+            <label class="input-label">🎨 Couleur Principale</label>
+            <input type="color" class="input-field" id="primary-color" value="#6366f1" style="height: 50px; cursor: pointer;">
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">🎨 Couleur Secondaire</label>
+            <input type="color" class="input-field" id="secondary-color" value="#ec4899" style="height: 50px; cursor: pointer;">
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">🌍 Langue du CV</label>
+            <select class="input-field" id="cv-language">
+                <option value="fr">🇫🇷 Français</option>
+                <option value="en">🇬🇧 English</option>
+                <option value="es">🇪🇸 Español</option>
+                <option value="de">🇩🇪 Deutsch</option>
+                <option value="it">🇮🇹 Italiano</option>
+                <option value="pt">🇵🇹 Português</option>
+                <option value="ar">🇸🇦 العربية</option>
+                <option value="zh">🇨🇳 中文</option>
+                <option value="ja">🇯🇵 日本語</option>
+                <option value="ru">🇷🇺 Русский</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">✍️ Style de Police</label>
+            <select class="input-field" id="cv-font">
+                <option value="Arial" style="font-family: Arial;">Arial</option>
+                <option value="Helvetica" style="font-family: Helvetica;">Helvetica</option>
+                <option value="Times New Roman" style="font-family: Times New Roman;">Times New Roman</option>
+                <option value="Georgia" style="font-family: Georgia;">Georgia</option>
+                <option value="Verdana" style="font-family: Verdana;">Verdana</option>
+                <option value="Courier New" style="font-family: Courier New;">Courier New</option>
+                <option value="Trebuchet MS" style="font-family: Trebuchet MS;">Trebuchet MS</option>
+                <option value="Palatino" style="font-family: Palatino;">Palatino</option>
+                <option value="Garamond" style="font-family: Garamond;">Garamond</option>
+                <option value="Calibri" style="font-family: Calibri;">Calibri</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="input-group" style="margin-top: 20px;">
+        <label class="input-label">📸 Photo de Profil (Optionnel)</label>
+        <div class="drop-zone" id="photo-drop-zone" onclick="document.getElementById('photo-file').click()">
+            <div class="drop-zone-icon">👤</div>
+            <div class="drop-zone-text">Cliquez ou glissez votre photo ici</div>
+            <div class="file-name" id="photo-file-name"></div>
+        </div>
+        <input type="file" id="photo-file" accept="image/*" style="display: none;" onchange="handlePhotoUpload(this)">
+    </div>
+</div>
+
+
+
+
+                <button class="btn btn-primary btn-block" onclick="generateCV()">✨ Générer le CV</button>
+
+                <div class="progress-container" id="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Génération en cours...</div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+        <!-- Results Section -->
+        <div id="results" class="section">
+            <div class="card">
+                <h2 class="card-title">CV Générés</h2>
+                
+                <div class="search-bar">
+                    <input type="text" class="input-field search-input" id="search-input" placeholder="🔍 Rechercher par poste ou entreprise..." oninput="filterResults()">
+                    <select class="input-field" id="sort-select" onchange="sortResults()" style="max-width: 200px;">
+                        <option value="date-desc">Plus récent</option>
+                        <option value="date-asc">Plus ancien</option>
+                        <option value="title-asc">Titre A-Z</option>
+                        <option value="title-desc">Titre Z-A</option>
+                    </select>
+                </div>
+
+                <div class="cv-grid" id="cv-grid">
+                    <!-- Results will be populated here -->
+                </div>
+
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <h3>Aucun CV généré pour le moment</h3>
+                    <p>Commencez par générer votre premier CV adapté à une offre d'emploi !</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span id="toast-message"></span>
+    </div>
+
+    <script src="js/script.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,257 @@
+```json
+{
+  "name": "Motaouakel El Maimouni",
+  "contacts": {
+    "email": "Motaouakelmaimo19@gmail.com",
+    "phone": "+212 609247261",
+    "locations": [
+      "Tangier, Morocco"
+    ],
+    "linkedin": "https://www.linkedin.com/in/motaouakel-el-maimouni/",
+    "website": "https://portfolio-omega-flame-czes73vxmi.vercel.app/"
+  },
+  "top_skills": [
+    "AI",
+    "Data Science",
+    "ERP Implementation",
+    "Server Management",
+    "Intelligent IT Solutions",
+    "Software Engineering",
+    "Cloud Solutions",
+    "Odoo ERP",
+    "Automation",
+    "Problem-solving",
+    "Workflow Optimization"
+  ],
+  "technical_skills": [
+    "Docker",
+    "Git/GitHub",
+    "Ubuntu Server",
+    "Local & Cloud Deployments",
+    "CI/CD",
+    "VirtualBox",
+    "IT Infrastructure",
+    "Static IP config",
+    "Firewall Settings",
+    "Odoo Server Management",
+    "Networking Fundamentals",
+    "Supervised Learning",
+    "CNNs",
+    "NLP RAG",
+    "Simple & Multi-agent Systems",
+    "AI automations (Langchain, Langgraph, n8n)",
+    "Feature Engineering",
+    "ETL & ELT",
+    "Talend Open Source",
+    "Kafka",
+    "Spark Streaming",
+    "Hadoop",
+    "YARN",
+    "Odoo ERP",
+    "React Native",
+    "Flutter",
+    "Flask",
+    "Django",
+    "Node-red",
+    "SQL",
+    "SQL Server",
+    "MongoDB",
+    "UML",
+    "Python",
+    "PostgreSQL",
+    "PySpark",
+    "Java"
+  ],
+  "soft_skills": [
+    "Communication",
+    "Teamwork",
+    "Problem-solving",
+    "Adaptability",
+    "Time management",
+    "Attention to detail"
+  ],
+  "top_roles": [
+    "AI Master Student",
+    "Aspiring Solution Architect",
+    "Software Engineer"
+  ],
+  "experiences": [
+    {
+      "title": "AI Master Student",
+      "company": "Faculty of Sciences and Technologies of Tangier (FSTT)",
+      "start": "June 1, 2025",
+      "end": "Present",
+      "description": "Co-developing strategic AI solutions for intelligent automation and workflow optimization. Supporting deployment architecture, integration with existing systems, and data flow design.",
+      "achievements": [],
+      "location": ""
+    },
+    {
+      "title": "ERP Odoo Implementation Intern",
+      "company": "Cloud Marketing HUB",
+      "start": "April 15, 2024",
+      "end": "September 1, 2024",
+      "description": "Implemented Odoo ERP on a local server for a multi-company holding. Designed internal exchange platforms and automated key workflows (purchase, sales, inventory). Worked on server-side deployment and security access for cloud ERP.",
+      "achievements": [],
+      "location": ""
+    },
+    {
+      "title": "Check-In and Boarding Agent",
+      "company": "Swissport – Tangier Ibn Battouta Airport",
+      "start": "July 1, 2023",
+      "end": "October 1, 2023",
+      "description": "Two-month role with certification in check-in and boarding. Ensured smooth passenger flow and compliance with aviation regulations.",
+      "achievements": [],
+      "location": ""
+    },
+    {
+      "title": "Designer freelance et vendeur sur Redbubble",
+      "company": "Redbubble",
+      "start": "2022",
+      "end": "2023",
+      "description": "Created and sold original designs online, managing the full process from concept to sale.",
+      "achievements": [],
+      "location": ""
+    }
+  ],
+  "projects": [
+    {
+      "name": "Real-Time Market Study & Reporting Agent",
+      "description": "Built a SaaS use case with automatic workflows using LangChain, LangGraph, and MCP for real-time search and report generation.",
+      "technologies": [
+        "LangChain",
+        "LangGraph",
+        "MCP"
+      ],
+      "role": "Developer",
+      "timeframe": ""
+    },
+    {
+      "name": "Odoo-Based Exchange & Trading Platform",
+      "description": "Implemented Odoo in a local cloud to create a secure, centralized ERP for managing inter-company purchases, sales, and financial analytics.",
+      "technologies": [
+        "Odoo"
+      ],
+      "role": "Developer",
+      "timeframe": ""
+    },
+    {
+      "name": "HR Process Optimization with Odoo",
+      "description": "Streamlined HR operations in Odoo using a semi-real scenario: from recruitment to employee management, including automated emails, pre-hiring tests, and document handling.",
+      "technologies": [
+        "Odoo"
+      ],
+      "role": "Developer",
+      "timeframe": ""
+    },
+    {
+      "name": "Interactive Data Analysis & Visualization Platform",
+      "description": "Developed a web app for dataset import, processing, and visualization with integrated machine learning for training and prediction.",
+      "technologies": [
+        "Python",
+        "Flask",
+        "PostgreSQL"
+      ],
+      "role": "Developer",
+      "timeframe": ""
+    },
+    {
+      "name": "Real-Time Amazon Review Analysis Pipeline",
+      "description": "Built a streaming data pipeline to classify Amazon review sentiments using machine learning.",
+      "technologies": [
+        "Kafka",
+        "Zookeeper",
+        "Spark Streaming",
+        "PySpark",
+        "MongoDB",
+        "Docker",
+        "Python",
+        "Java"
+      ],
+      "role": "Developer",
+      "timeframe": ""
+    },
+    {
+      "name": "Smart Airport Luggage Tracking System (IoT)",
+      "description": "Created an IoT system to track luggage via QR code and mobile app. Used Node-RED for flows, Firebase for real-time DB, and React Native for the UI.",
+      "technologies": [
+        "Node-RED",
+        "Firebase",
+        "React Native"
+      ],
+      "role": "Developer",
+      "timeframe": ""
+    },
+    {
+      "name": "Preserving Moroccan Culture through Deep Learning (thurathIA)",
+      "description": "Scientific project applying CNNs to classify traditional Moroccan Zellige tiles. Aimed at preserving cultural heritage through AI-based pattern recognition and dataset analysis.",
+      "technologies": [
+        "CNNs"
+      ],
+      "role": "Developer",
+      "timeframe": ""
+    }
+  ],
+  "education": [
+    {
+      "degree": "Master’s Student in Artificial Intelligence and Data Science – 2nd Year",
+      "institution": "Faculty of Sciences and Technologies of Tangier (FSTT)",
+      "start": "2023",
+      "end": "June 1, 2025",
+      "year": null,
+      "notes": null
+    },
+    {
+      "degree": "Bachelor’s Degree in Science and Technology – Major: Software Application Development Engineering",
+      "institution": "Faculté des Sciences et Technologies de Tanger",
+      "start": "2021",
+      "end": "2024",
+      "year": null,
+      "notes": null
+    },
+    {
+      "degree": "DEUST – University Diploma in Science and Technology",
+      "institution": "Faculté des Sciences et Technologies de Tanger",
+      "start": "2021",
+      "end": "2023",
+      "year": null,
+      "notes": null
+    },
+    {
+      "degree": "Baccalaureate in Mathematical Sciences",
+      "institution": "Moulay Youssef Technical High School",
+      "start": null,
+      "end": null,
+      "year": null,
+      "notes": null
+    }
+  ],
+  "certifications": [
+    "Introduction to Data Analysis – IBM"
+  ],
+  "languages": [
+    "English: Very Good",
+    "French: Very Good",
+    "Arabic: Native",
+    "Spanish: Beginner"
+  ],
+  "interests": [
+    "Human Development Project",
+    "Supporting abandoned and underprivileged children",
+    "Community-focused activities"
+  ],
+  "awards": [],
+  "publications": [],
+  "keywords": [
+    "AI",
+    "Data Science",
+    "ERP",
+    "Odoo",
+    "Automation",
+    "Software Engineer",
+    "Machine Learning",
+    "Python"
+  ],
+  "raw_findings": "Elmaimouni.motaouakel@etu.uae.ac.ma\nDate of Birth:\n05/12/2003",
+  "confidence_notes": ""
+}
+```
