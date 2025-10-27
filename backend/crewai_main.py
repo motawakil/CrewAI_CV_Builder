@@ -1,3 +1,4 @@
+
 """
 crewai_main.py
 Sequential pipeline:
@@ -169,19 +170,36 @@ class Agent:
 
         # Extract pdf text
         pdf_text = extract_text_from_pdf(pdf_path)
+        logger.info(f"PDF text preview (first 1000 chars):\n{pdf_text[:1000] if pdf_text else 'No text extracted'}")
+
         write_debug_file("task1_profile.json", json.dumps(profile, ensure_ascii=False, indent=2))
         write_debug_file("task1_pdf_excerpt.txt", pdf_text[:6000])
 
         # Build prompt
         prompt = (
-            "You are an assistant that must extract a concise candidate profile and provide structured fields.\n"
-            "INPUT: a JSON profile and a PDF resume text.\n"
-            "OUTPUT FORMAT: first print a short paragraph (2-4 sentences) describing the candidate, then on a new line print a JSON object with keys: "
-            "\"name\", \"email\", \"phone\", \"top_skills\" (list), \"top_roles\" (list), \"education\" (list of strings), \"languages\" (list).\n\n"
+            "You are a very detail-oriented AI assistant. Your goal is to extract **all possible information** from the candidate profile.\n"
+            "Use both the JSON profile and the PDF resume text.\n"
+            "Do not skip any fields, even if missing in JSON. If a field is missing, mark it as 'Unknown' or empty.\n\n"
+            "Required JSON keys (extract everything, even study, interests, hobbies, certificates, projects, etc.):\n"
+            "- name (full name)\n"
+            "- email\n"
+            "- phone\n"
+            "- top_skills (list)\n"
+            "- top_roles (list)\n"
+            "- education (list of strings)\n"
+            "- languages (list)\n"
+            "- studies (list)\n"
+            "- interests (list)\n"
+            "- certificates (list)\n"
+            "- projects (list)\n"
+            "- other (dict)\n\n"
+            "First, write a concise 3-5 sentence paragraph summarizing the candidate. "
+            "Then, on a new line, write the JSON object with all keys exactly as listed.\n\n"
             "PROFILE JSON:\n" + json.dumps(profile, ensure_ascii=False) + "\n\n"
-            "PDF TEXT (excerpt):\n" + (pdf_text[:3000] if pdf_text else "") + "\n\n"
-            "Return EXACTLY: paragraph then JSON (no extra commentary)."
+            "PDF TEXT (excerpt):\n" + (pdf_text[:5000] if pdf_text else "") + "\n\n"
+            "Return EXACTLY the paragraph, then JSON (no extra commentary)."
         )
+
 
         generated = self.llm.generate(prompt) if self.llm else ""
         write_debug_file("task1_raw_llm.txt", generated or "")
@@ -216,6 +234,7 @@ class Agent:
                 return datetime.datetime.fromisoformat(j.get("createdAt"))
             except Exception:
                 return datetime.datetime.min
+
 
         latest = sorted(jobs, key=parse_dt)[-1]
 
@@ -283,17 +302,13 @@ class Agent:
                 json_text, md_part = generated.split(marker, 1)
                 json_text = json_text.strip()
             else:
-                # try to extract JSON block
                 parsed = safe_json_load_from_text(generated)
                 if parsed is not None:
                     json_part = parsed
-                    # markdown fallback: everything else
                     md_part = ""
                 else:
-                    # unable to find JSON
                     json_text = "{}"
             if json_part is None:
-                # if we have json_text try to parse
                 if 'json_text' in locals():
                     try:
                         json_part = json.loads(json_text)
@@ -321,20 +336,29 @@ class Agent:
                 other=(json_part or {}).get("other", {})
             )
 
-        # Save outputs
-        try:
-            (Path("generated_cv.json")).write_text(cv.model_dump_json(indent=2, ensure_ascii=False), encoding="utf-8")
-            logger.info("Saved generated_cv.json")
-        except Exception as e:
-            logger.error(f"Failed saving generated_cv.json: {e}")
+        # -------------------------------
+        # 🗂️ Create output directory safely
+        # -------------------------------
+        output_dir = Path("backend/stored_cvs")
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save markdown if available, else create simple markdown
+        # Create filenames based on name or fallback
+        base_name = (cv.name or "cv_unnamed").replace(" ", "_")
+        json_path = output_dir / f"{base_name}.json"
+        md_path = output_dir / f"{base_name}.md"
+
+        # Save JSON
         try:
-            md_path = Path("generated_cv.md")
+            json_path.write_text(cv.model_dump_json(indent=2, ensure_ascii=False), encoding="utf-8")
+            logger.info(f"Saved CV JSON: {json_path}")
+        except Exception as e:
+            logger.error(f"Failed saving CV JSON: {e}")
+
+        # Save markdown
+        try:
             if md_part and md_part.strip():
                 md_path.write_text(md_part.strip(), encoding="utf-8")
             else:
-                # simple markdown fallback
                 with md_path.open("w", encoding="utf-8") as f:
                     f.write(f"# {cv.name or 'Candidate'}\n\n")
                     if cv.email: f.write(f"- Email: {cv.email}\n")
@@ -347,11 +371,11 @@ class Agent:
                     f.write("\n## Experience\n\n")
                     for e in cv.experience:
                         f.write(f"**{e.get('title','')}**, {e.get('company','')}\n\n{e.get('description','')}\n\n")
-            logger.info("Saved generated_cv.md")
+            logger.info(f"Saved CV Markdown: {md_path}")
         except Exception as e:
-            logger.error(f"Failed saving generated_cv.md: {e}")
+            logger.error(f"Failed saving CV Markdown: {e}")
 
-        # If empty, write debug note
+        # Debug if empty
         if not cv.name and not cv.email and not cv.skills:
             write_debug_file("task3_cv_empty_notice.txt", "CV appears empty. Check task3_raw_llm.txt and task3_failed_json.txt for details.")
             logger.warning("Generated CV seems to be missing main fields. See debug_outputs/ for details.")
@@ -425,56 +449,171 @@ class Process:
 # ----------------------
 # Main
 # ----------------------
+
+import json
+import logging
+from pathlib import Path
+
+from typing import Tuple, Any, Dict
+
+# Your project LLM / agent / process imports (adjust module paths as needed)
+# from your_agent_module import Agent, GeminiClient, ProfileResult, JobAnalysisResult, CVModel
+# from your_process_framework import Process
+
+# Import the PDF builder function from create_cv.py (must be in PYTHONPATH)
+from backend.create_cv import create_dynamic_pdf
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# OUTPUT path used by pipeline to save the clean generated JSON
+OUTPUT_JSON = Path("backend/utils/generated_cv.json")
+JOBS_JSON = Path("backend/utils/jobs_informations.json")
+
+
+def load_latest_data_from_utils() -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Load the generated CV JSON and the latest job info from backend/utils.
+
+    Returns (cv_data, job_info).
+    Raises FileNotFoundError if files are missing or JSON parse errors.
+    """
+    base_dir = Path(__file__).resolve().parent  # directory containing crewai_main.py
+    utils_dir = base_dir / "utils"
+
+    cv_path = utils_dir / "generated_cv.json"
+    jobs_path = utils_dir / "jobs_informations.json"
+
+    logger.info(f"Looking for generated CV at: {cv_path}")
+    logger.info(f"Looking for jobs JSON at: {jobs_path}")
+
+    if not utils_dir.exists():
+        raise FileNotFoundError(f"'utils' directory does not exist at {utils_dir}")
+
+    if not cv_path.exists():
+        raise FileNotFoundError(f"generated_cv.json not found at {cv_path}")
+    if not jobs_path.exists():
+        raise FileNotFoundError(f"jobs_informations.json not found at {jobs_path}")
+
+    # Read CV JSON
+    try:
+        cv_text = cv_path.read_text(encoding="utf-8")
+        cv_data = json.loads(cv_text)
+    except Exception as e:
+        raise RuntimeError(f"Failed to read/parse {cv_path}: {e}") from e
+
+    # Read jobs JSON and select last entry
+    try:
+        jobs_text = jobs_path.read_text(encoding="utf-8")
+        jobs = json.loads(jobs_text)
+    except Exception as e:
+        raise RuntimeError(f"Failed to read/parse {jobs_path}: {e}") from e
+
+    if isinstance(jobs, list):
+        job_info = jobs[-1] if jobs else {}
+    elif isinstance(jobs, dict):
+        job_info = jobs
+    else:
+        job_info = {}
+
+    logger.info("Loaded CV and job info from utils successfully.")
+    print(f"CV data elements : {cv_data}")
+    print(f"Job info elements : {job_info}")
+    return cv_data, job_info
+
+from pathlib import Path
+import json
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 def run_job_analyzer():
     PROFILE_JSON = "backend/utils/profile.json"
     JOBS_JSON = "backend/utils/jobs_informations.json"
-    PDF_PATH = "uploads/Motaouakel_ElMaimouni_CV.pdf"
+    PDF_PATH = "uploads/uploaded_profile_cv.pdf"
     OUTPUT_JSON = "backend/utils/generated_cv.json"
 
-    # Initialize Gemini client
+    # Initialize Gemini client and agent (adjust to your actual constructors)
     gemini = GeminiClient(model="gemini-2.0-flash")
     agent = Agent(llm_client=gemini)
 
     p = Process("profile_job_cv_pipeline")
-    
+
     # Step 1 - build profile
     p.add_step("step1_build_profile", lambda state: agent.task_build_profile(PROFILE_JSON, PDF_PATH))
     # Step 2 - analyze job
     p.add_step("step2_analyze_job", lambda state: agent.task_analyze_job(JOBS_JSON))
+
     # Step 3 - build CV
     def step3(state):
         prof = state.get("step1_build_profile")
         job = state.get("step2_analyze_job")
+
         if prof is None or not isinstance(prof, ProfileResult):
             prof = agent.task_build_profile(PROFILE_JSON, PDF_PATH)
         if job is None or not isinstance(job, JobAnalysisResult):
             job = agent.task_analyze_job(JOBS_JSON)
+
         return agent.task_build_cv(prof, job)
 
     p.add_step("step3_build_cv", step3)
 
-    # Run process
+    logger.info("▶️ Starting pipeline process...")
     final_state = p.run({"start": True})
+    logger.info("▶️ Pipeline finished.")
 
     # Get final CV result
     cv = final_state.get("step3_build_cv")
 
     if isinstance(cv, CVModel):
-        logger.info("✅ CV successfully generated")
-        logger.info(cv.model_dump_json(indent=2, ensure_ascii=False))
+        try:
+            # Save clean JSON in backend/utils (optional for debugging)
+            cv_data = cv.model_dump()
+            out_path = Path(OUTPUT_JSON)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(json.dumps(cv_data, ensure_ascii=False, indent=2), encoding="utf-8")
+            logger.info(f"💾 Clean CV JSON saved to {out_path}")
 
-        # ✅ Save clean JSON only
-        with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-            json.dump(cv.model_dump(), f, indent=2, ensure_ascii=False)
+            # Try to reload data safely
+            try:
+                cv_loaded, job_info = load_latest_data_from_utils()
+            except Exception as e:
+                logger.warning(f"Could not reload files from utils: {e}. Using memory fallback.")
+                cv_loaded = cv_data
+                jobs_path = Path(JOBS_JSON)
+                if jobs_path.exists():
+                    jobs = json.loads(jobs_path.read_text(encoding="utf-8"))
+                    job_info = jobs[-1] if isinstance(jobs, list) and jobs else jobs
+                else:
+                    job_info = {}
 
-        logger.info(f"💾 CV saved to {OUTPUT_JSON}")
+            # -------------------------------
+            # 🗂️ Save PDF inside stored_cvs/
+            # -------------------------------
+            stored_dir = Path("backend/stored_cvs")
+            stored_dir.mkdir(parents=True, exist_ok=True)
+
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            base_name = (cv.name or "generated_cv").replace(" ", "_")
+            pdf_filename = stored_dir / f"{base_name}_{timestamp}.pdf"
+
+            logger.info(f"🖨️ Generating PDF at {pdf_filename} ...")
+            try:
+                create_dynamic_pdf(cv_loaded, job_info, str(pdf_filename))
+                logger.info(f"✅ PDF created: {pdf_filename}")
+            except Exception as e:
+                logger.exception(f"Failed to create PDF from CV/job info: {e}")
+
+        except Exception as e:
+            logger.exception(f"Failed saving generated CV JSON: {e}")
     else:
-        logger.warning("⚠️ Step 3 did not return a valid CVModel. Please check the model output.")
+        logger.warning("⚠️ Step 3 did not return a valid CVModel. Please check debug outputs for raw LLM responses.")
 
-    logger.info("🎯 Process complete — only 'generated_cv.json' saved.")
-    
+    logger.info("🎯 run_job_analyzer completed.")
+
 
 if __name__ == "__main__":
     run_job_analyzer()
-
-
