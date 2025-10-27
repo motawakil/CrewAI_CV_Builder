@@ -148,18 +148,29 @@ async def load_profile():
 @app.post("/api/upload-cv/")
 async def upload_cv(file: UploadFile = File(...)):
     """
-    Upload le CV PDF vers le dossier local.
+    Upload le CV PDF vers le dossier local sous un nom fixe 'uploaded_profile_cv.pdf'.
     """
     try:
         os.makedirs(UPLOAD_DIR, exist_ok=True)
-        file_path = os.path.join(UPLOAD_DIR, file.filename)
+
+        # Force a static name for the uploaded CV
+        fixed_filename = "uploaded_profile_cv.pdf"
+        file_path = os.path.join(UPLOAD_DIR, fixed_filename)
+
+        # Save the uploaded file content
         with open(file_path, "wb") as f:
             f.write(await file.read())
 
-        return {"status": "ok", "message": "CV uploadé avec succès", "fileName": file.filename}
+        return {
+            "status": "ok",
+            "message": "CV uploadé avec succès",
+            "fileName": fixed_filename
+        }
+
     except Exception as e:
         print("Error uploading CV:", e)
         return {"status": "error", "message": str(e)}
+
 
 
 @app.post("/api/reset-profile/")
@@ -302,8 +313,10 @@ async def load_jobs():
 app.mount("/uploads", StaticFiles(directory="backend/uploads"), name="uploads")
 
 
-from fastapi.responses import FileResponse, JSONResponse
 
+
+import os
+from fastapi.responses import FileResponse, JSONResponse
 
 STORED_CVS_DIR = "backend/stored_cvs"
 
