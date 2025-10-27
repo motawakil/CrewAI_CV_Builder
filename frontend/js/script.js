@@ -340,7 +340,6 @@ async function generateCV() {
         // ------------------------------- Results Management ------------------------------- //
 
 
-// ------------------------------- Load Generated CVs from Backend ------------------------------- //
 
 async function loadResults() {
     const cvGrid = document.getElementById('cv-grid');
@@ -408,9 +407,6 @@ async function deleteStoredCV(filename) {
 
 
 
-
-
-
 // Photo Upload Handler (ajoutez après handleJobUpload)
 function handlePhotoUpload(input) {
     if (input.files && input.files[0]) {
@@ -431,17 +427,6 @@ function handlePhotoUpload(input) {
         reader.readAsDataURL(file);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
         // Toast Notification
