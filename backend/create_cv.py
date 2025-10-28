@@ -7,7 +7,9 @@ from reportlab.lib.colors import Color
 from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Paragraph, Frame, Image, Spacer
+from reportlab.platypus import Paragraph, Frame, Spacer
+from reportlab.lib.utils import ImageReader
+from PIL import Image as PILImage, ImageDraw
 
 # -------------------------------------------------------------------------
 # Load CV Data
@@ -57,30 +59,63 @@ def is_meaningful(val):
 
 
 # -------------------------------------------------------------------------
+# Create circular mask for image
+# -------------------------------------------------------------------------
+def create_circular_image(img_path, size):
+    """Create a circular cropped image"""
+    try:
+        img = PILImage.open(img_path).convert('RGB')
+        
+        # Resize to square
+        img = img.resize((size, size), PILImage.LANCZOS)
+        
+        # Create circular mask
+        mask = PILImage.new('L', (size, size), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, size, size), fill=255)
+        
+        # Apply mask
+        output = PILImage.new('RGB', (size, size), (255, 255, 255))
+        output.paste(img, (0, 0))
+        output.putalpha(mask)
+        
+        return output
+    except Exception as e:
+        print(f"Error creating circular image: {e}")
+        return None
+
+
+# -------------------------------------------------------------------------
 # PDF Builder
 # -------------------------------------------------------------------------
 def create_dynamic_pdf(cv_data, job_info, filename="cv_dynamic.pdf"):
     PAGE_WIDTH, PAGE_HEIGHT = A4
 
-    # --- Theme settings ---
-    primary = hex_to_color(job_info.get("primaryColor", "#27374D"))
-    secondary = hex_to_color(job_info.get("secondaryColor", "#344966"))
-    font_name = "Helvetica"
-    bold_font = "Helvetica-Bold"
+    # --- Theme settings with elegant fonts ---
+    primary = hex_to_color(job_info.get("primaryColor", "#1a1a2e"))
+    secondary = hex_to_color(job_info.get("secondaryColor", "#16213e"))
+    accent = hex_to_color("#0f3460")
+    
+    font_name = "Times-Roman"
+    bold_font = "Times-Bold"
+    italic_font = "Times-Italic"
 
-    MARGIN_LEFT = 12 * mm
-    MARGIN_RIGHT = 12 * mm
-    MARGIN_TOP = 8 * mm
-    MARGIN_BOTTOM = 8 * mm
-    HEADER_HEIGHT = 42 * mm
-    GAP = 6 * mm
+    MARGIN_LEFT = 15 * mm
+    MARGIN_RIGHT = 15 * mm
+    MARGIN_TOP = 12 * mm
+    MARGIN_BOTTOM = 12 * mm
+    HEADER_HEIGHT = 52 * mm
+    GAP = 8 * mm
 
     CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
-    COL_WIDTH = (CONTENT_WIDTH - GAP) * 0.58
+    COL_WIDTH = (CONTENT_WIDTH - GAP) * 0.60
     RIGHT_COL_WIDTH = (CONTENT_WIDTH - GAP) - COL_WIDTH
 
+    # Image circle size
+    IMAGE_CIRCLE_SIZE = 38 * mm
+
     # ---------------------------------------------------------------------
-    # Safe style registration helper
+    # Enhanced style registration
     # ---------------------------------------------------------------------
     styles = getSampleStyleSheet()
 
@@ -92,12 +127,12 @@ def create_dynamic_pdf(cv_data, job_info, filename="cv_dynamic.pdf"):
         else:
             styles.add(ParagraphStyle(name=name, **kwargs))
 
-    set_style('Name', fontName=bold_font, fontSize=20, textColor=primary, leading=22)
-    set_style('Job', fontName=font_name, fontSize=10, textColor=colors.black)
-    set_style('Section', fontName=bold_font, fontSize=11, textColor=secondary, spaceBefore=6)
-    set_style('Normal', fontName=font_name, fontSize=9, leading=11)
-    set_style('Bullet', fontName=font_name, fontSize=9, leading=11, leftIndent=8)
-    set_style('Contact', fontName=font_name, fontSize=9, leading=11, textColor=colors.black)
+    set_style('Name', fontName=bold_font, fontSize=26, textColor=primary, leading=30, spaceAfter=6)
+    set_style('Section', fontName=bold_font, fontSize=12, textColor=secondary, spaceBefore=12, spaceAfter=8)
+    set_style('Normal', fontName=font_name, fontSize=10, leading=14, spaceAfter=4)
+    set_style('Bullet', fontName=font_name, fontSize=9.5, leading=14, leftIndent=12, spaceAfter=3)
+    set_style('ContactSmall', fontName=font_name, fontSize=9.5, leading=13, textColor=colors.HexColor('#3a3a3a'))
+    set_style('SubText', fontName=font_name, fontSize=9, leading=12, textColor=colors.HexColor('#5a5a5a'))
 
     # ---------------------------------------------------------------------
     # Begin PDF
@@ -105,51 +140,67 @@ def create_dynamic_pdf(cv_data, job_info, filename="cv_dynamic.pdf"):
     c = canvas.Canvas(filename, pagesize=A4)
 
     # ---------------------------------------------------------------------
-    # Header (photo, name, summary, contact)
+    # Header (circular photo, name, contact line by line)
     # ---------------------------------------------------------------------
     header_top = PAGE_HEIGHT - MARGIN_TOP
-    img_h = HEADER_HEIGHT * 0.85
-    img_w = 0.18 * CONTENT_WIDTH
-    img_x = MARGIN_LEFT
-    img_y = header_top - img_h
-
+    
+    # Circular photo settings
+    photo_radius = IMAGE_CIRCLE_SIZE / 2
+    photo_x = MARGIN_LEFT
+    photo_y = header_top - IMAGE_CIRCLE_SIZE - 3 * mm
+    
+    # Draw photo or placeholder
     has_photo = job_info.get("hasPhoto", False)
-    # If hasPhoto and there's a file, draw it; else draw circle placeholder
+    photo_drawn = False
+    
     if has_photo:
         photo_dir = Path("uploads/photos")
-        photos = sorted(photo_dir.glob("*"), key=lambda x: x.stat().st_mtime) if photo_dir.exists() else []
-        if photos:
-            img_path = photos[-1]
-            try:
-                img = Image(str(img_path), width=img_w, height=img_h)
-                img.drawOn(c, img_x, img_y)
-            except Exception:
-                c.setStrokeColor(primary)
-                cx = img_x + img_w / 2
-                cy = img_y + img_h / 2
-                c.circle(cx, cy, img_w / 2, stroke=1, fill=0)
-        else:
-            c.setStrokeColor(primary)
-            cx = img_x + img_w / 2
-            cy = img_y + img_h / 2
-            c.circle(cx, cy, img_w / 2, stroke=1, fill=0)
-    else:
+        if photo_dir.exists():
+            photos = sorted(photo_dir.glob("*"), key=lambda x: x.stat().st_mtime)
+            if photos:
+                img_path = str(photos[-1])
+                try:
+                    # Create circular image
+                    circular_img = create_circular_image(img_path, int(IMAGE_CIRCLE_SIZE * 2.83))  # Convert mm to pixels
+                    
+                    if circular_img:
+                        # Save temp circular image
+                        temp_path = Path("temp_circular.png")
+                        circular_img.save(temp_path, "PNG")
+                        
+                        # Draw the circular image
+                        c.drawImage(str(temp_path), photo_x, photo_y, 
+                                  width=IMAGE_CIRCLE_SIZE, height=IMAGE_CIRCLE_SIZE, 
+                                  mask='auto', preserveAspectRatio=True)
+                        
+                        # Draw border
+                        c.setStrokeColor(primary)
+                        c.setLineWidth(2)
+                        c.circle(photo_x + photo_radius, photo_y + photo_radius, photo_radius, stroke=1, fill=0)
+                        
+                        photo_drawn = True
+                        
+                        # Clean up temp file
+                        if temp_path.exists():
+                            temp_path.unlink()
+                except Exception as e:
+                    print(f"Error drawing photo: {e}")
+    
+    # Draw placeholder circle if no photo
+    if not photo_drawn:
         c.setStrokeColor(primary)
-        cx = img_x + img_w / 2
-        cy = img_y + img_h / 2
-        c.circle(cx, cy, img_w / 2, stroke=1, fill=0)
+        c.setLineWidth(2)
+        c.setFillColor(colors.white)
+        c.circle(photo_x + photo_radius, photo_y + photo_radius, photo_radius, stroke=1, fill=1)
 
-    # --- Name + Summary + Contact ---
+    # --- Name + Contact (line by line) ---
     name = cv_data.get("name", "John Doe")
-    summary = cv_data.get("summary", "")
     p_name = Paragraph(f"<b>{name}</b>", styles['Name'])
-    p_summary = Paragraph(summary, styles['Job']) if is_meaningful(summary) else None
 
-    # Contact fields: prefer top-level email/phone, fallback to cv_data['other']
+    # Contact fields
     email = cv_data.get("email")
     phone = cv_data.get("phone")
     other = cv_data.get("other", {}) or {}
-    # Accept secondary email field
     email2 = other.get("email2")
     portfolio = other.get("portfolio")
     linkedin = other.get("linkedin")
@@ -157,96 +208,112 @@ def create_dynamic_pdf(cv_data, job_info, filename="cv_dynamic.pdf"):
     dob = other.get("date_of_birth")
     address = other.get("address")
 
-    # Build a list of contact fragments (only include meaningful ones)
-    contact_items = []
-
+    # Build contact items (line by line)
+    contact_flow = []
     if is_meaningful(email):
-        # clickable mailto link
-        contact_items.append(f"<a href='mailto:{email}' color='blue'>✉ {email}</a>")
+        contact_flow.append(Paragraph(f"Email: <a href='mailto:{email}' color='#0066cc'>{email}</a>", styles['ContactSmall']))
     if is_meaningful(email2) and email2 != email:
-        contact_items.append(f"<a href='mailto:{email2}' color='blue'>✉ {email2}</a>")
+        contact_flow.append(Paragraph(f"Email: <a href='mailto:{email2}' color='#0066cc'>{email2}</a>", styles['ContactSmall']))
     if is_meaningful(phone):
-        # tel link
         tel_link = phone.replace(" ", "")
-        contact_items.append(f"<a href='tel:{tel_link}' color='blue'>☎ {phone}</a>")
+        contact_flow.append(Paragraph(f"Phone: <a href='tel:{tel_link}' color='#0066cc'>{phone}</a>", styles['ContactSmall']))
     if is_meaningful(portfolio):
-        contact_items.append(f"<a href='{portfolio}' color='blue'>🔗 Portfolio</a>")
+        display_url = portfolio.replace("https://", "").replace("http://", "")
+        contact_flow.append(Paragraph(f"Portfolio: <a href='{portfolio}' color='#0066cc'>{display_url}</a>", styles['ContactSmall']))
     if is_meaningful(linkedin):
-        contact_items.append(f"<a href='{linkedin}' color='blue'>in: LinkedIn</a>")
+        display_url = linkedin.replace("https://", "").replace("http://", "")
+        contact_flow.append(Paragraph(f"LinkedIn: <a href='{linkedin}' color='#0066cc'>{display_url}</a>", styles['ContactSmall']))
     if is_meaningful(redbubble):
-        # show only if meaningful and not 'Unknown'
-        if is_meaningful(redbubble):
-            contact_items.append(f"🎨 {redbubble}")
+        contact_flow.append(Paragraph(f"Redbubble: {redbubble}", styles['ContactSmall']))
     if is_meaningful(address):
-        contact_items.append(f"📍 {address}")
+        contact_flow.append(Paragraph(f"Address: {address}", styles['ContactSmall']))
     if is_meaningful(dob):
-        contact_items.append(f"🎂 {dob}")
+        contact_flow.append(Paragraph(f"Date of Birth: {dob}", styles['ContactSmall']))
 
-    # Join contact items with separators
-    contact_line = " — ".join(contact_items) if contact_items else ""
+    # Draw header frame to the right of photo
+    header_frame_x = photo_x + IMAGE_CIRCLE_SIZE + 12 * mm
+    header_frame_width = CONTENT_WIDTH - IMAGE_CIRCLE_SIZE - 12 * mm
+    header_frame = Frame(header_frame_x, photo_y, header_frame_width, IMAGE_CIRCLE_SIZE + 3 * mm, showBoundary=0)
+    
+    header_content = [p_name, Spacer(1, 3)]
+    header_content.extend(contact_flow)
+    
+    header_frame.addFromList(header_content, c)
 
-    # Draw the frame to the right of the photo for name/summary/contact
-    frame = Frame(img_x + img_w + 8 * mm, img_y, CONTENT_WIDTH - img_w - 20 * mm, img_h, showBoundary=0)
-    header_flow = [p_name]
-    if p_summary:
-        header_flow.append(p_summary)
-    if contact_line:
-        header_flow.append(Spacer(1, 4))
-        header_flow.append(Paragraph(contact_line, styles['Contact']))
-    frame.addFromList(header_flow, c)
+    # Draw horizontal line under header
+    line_y = photo_y - 8
+    c.setStrokeColor(accent)
+    c.setLineWidth(0.8)
+    c.line(MARGIN_LEFT, line_y, PAGE_WIDTH - MARGIN_RIGHT, line_y)
 
     # ---------------------------------------------------------------------
-    # Left Column (Profile, Contact block, Education, Experience)
+    # Left Column (Profile, Education, Experience)
     # ---------------------------------------------------------------------
     def build_left():
         story = []
 
-        # Profile / Summary (on left as well if exists)
+        # Profile/Summary
+        summary = cv_data.get("summary", "")
         if is_meaningful(summary):
-            story.append(Paragraph("Profile", styles["Section"]))
+            story.append(Paragraph("<b>PROFILE</b>", styles["Section"]))
             story.append(Paragraph(summary, styles["Normal"]))
-            story.append(Spacer(1, 6))
-
-        # Add a Contact section on the left for ATS / clarity
-        if contact_line:
-            story.append(Paragraph("Contact", styles["Section"]))
-            # prefer showing each contact item on new line for readability
-            for item in contact_items:
-                story.append(Paragraph(item, styles["Normal"]))
-            story.append(Spacer(1, 6))
+            story.append(Spacer(1, 8))
 
         # Education
         educations = cv_data.get("education", [])
         if educations:
-            story.append(Paragraph("Education", styles["Section"]))
+            story.append(Paragraph("<b>EDUCATION</b>", styles["Section"]))
             for edu in educations:
-                line = f"<b>{edu.get('degree', '')}</b>"
+                degree = edu.get('degree', '')
+                institution = edu.get('institution', '')
+                year = edu.get('year', '')
+                
+                if degree:
+                    story.append(Paragraph(f"<b>{degree}</b>", styles["Normal"]))
+                
                 details = []
-                if is_meaningful(edu.get('institution', '')):
-                    details.append(edu.get('institution', ''))
-                if is_meaningful(edu.get('year', '')):
-                    details.append(str(edu.get('year', '')))
+                if is_meaningful(institution):
+                    details.append(institution)
+                if is_meaningful(year):
+                    details.append(str(year))
+                
                 if details:
-                    line += " — " + " | ".join(details)
-                story.append(Paragraph(line, styles["Normal"]))
-            story.append(Spacer(1, 6))
+                    story.append(Paragraph(" | ".join(details), styles["SubText"]))
+                    story.append(Spacer(1, 2))
+                
+                story.append(Spacer(1, 6))
+            story.append(Spacer(1, 4))
 
         # Experience
         experiences = cv_data.get("experience", [])
         if experiences:
-            story.append(Paragraph("Professional Experience", styles["Section"]))
+            story.append(Paragraph("<b>PROFESSIONAL EXPERIENCE</b>", styles["Section"]))
             for exp in experiences:
                 title = exp.get("title", "")
                 company = exp.get("company", "")
                 start = exp.get("start", "")
                 end = exp.get("end", "")
                 desc = exp.get("description", "")
-                meta = " — ".join([p for p in (company, f"{start} – {end}" if (is_meaningful(start) or is_meaningful(end)) else None) if p])
-                header = f"<b>{title}</b>" + (f" {meta}" if meta else "")
-                story.append(Paragraph(header, styles["Normal"]))
+                
+                if title:
+                    story.append(Paragraph(f"<b>{title}</b>", styles["Normal"]))
+                
+                meta_parts = []
+                if is_meaningful(company):
+                    meta_parts.append(company)
+                if is_meaningful(start) or is_meaningful(end):
+                    date_range = f"{start} – {end}".strip(" –")
+                    meta_parts.append(date_range)
+                
+                if meta_parts:
+                    story.append(Paragraph(" | ".join(meta_parts), styles["SubText"]))
+                    story.append(Spacer(1, 2))
+                
                 if is_meaningful(desc):
+                    story.append(Spacer(1, 2))
                     story.append(Paragraph(desc.replace("\n", "<br/>"), styles["Bullet"]))
-                story.append(Spacer(1, 4))
+                
+                story.append(Spacer(1, 10))
 
         return story
 
@@ -255,31 +322,40 @@ def create_dynamic_pdf(cv_data, job_info, filename="cv_dynamic.pdf"):
     # ---------------------------------------------------------------------
     def build_right():
         story = []
-        story.append(Paragraph("Skills", styles["Section"]))
+        
+        # Skills
+        story.append(Paragraph("<b>SKILLS</b>", styles["Section"]))
         if cv_data.get("skills"):
-            story.append(Paragraph(", ".join(cv_data["skills"]), styles["Normal"]))
+            for skill in cv_data["skills"]:
+                story.append(Paragraph(f"• {skill}", styles["Normal"]))
         else:
-            story.append(Paragraph("No skills listed.", styles["Normal"]))
-        story.append(Spacer(1, 6))
+            story.append(Paragraph("No skills listed", styles["Normal"]))
+        story.append(Spacer(1, 8))
 
+        # Languages
         if cv_data.get("languages"):
-            story.append(Paragraph("Languages", styles["Section"]))
-            story.append(Paragraph(", ".join(cv_data["languages"]), styles["Normal"]))
-            story.append(Spacer(1, 6))
+            story.append(Paragraph("<b>LANGUAGES</b>", styles["Section"]))
+            for lang in cv_data["languages"]:
+                story.append(Paragraph(f"• {lang}", styles["Normal"]))
+            story.append(Spacer(1, 8))
 
+        # Certifications
         if cv_data.get("certifications"):
-            story.append(Paragraph("Certifications", styles["Section"]))
+            story.append(Paragraph("<b>CERTIFICATIONS</b>", styles["Section"]))
             for cert in cv_data["certifications"]:
-                story.append(Paragraph(cert, styles["Normal"]))
+                story.append(Paragraph(f"• {cert}", styles["Normal"]))
+                story.append(Spacer(1, 2))
+        
         return story
 
     # ---------------------------------------------------------------------
     # Layout columns
     # ---------------------------------------------------------------------
-    left_frame = Frame(MARGIN_LEFT, MARGIN_BOTTOM, COL_WIDTH,
-                       PAGE_HEIGHT - HEADER_HEIGHT - 20 * mm, showBoundary=0)
-    right_frame = Frame(MARGIN_LEFT + COL_WIDTH + GAP, MARGIN_BOTTOM,
-                        RIGHT_COL_WIDTH, PAGE_HEIGHT - HEADER_HEIGHT - 20 * mm, showBoundary=0)
+    content_top = line_y - 8
+    content_height = content_top - MARGIN_BOTTOM
+    
+    left_frame = Frame(MARGIN_LEFT, MARGIN_BOTTOM, COL_WIDTH, content_height, showBoundary=0)
+    right_frame = Frame(MARGIN_LEFT + COL_WIDTH + GAP, MARGIN_BOTTOM, RIGHT_COL_WIDTH, content_height, showBoundary=0)
 
     left_frame.addFromList(build_left(), c)
     right_frame.addFromList(build_right(), c)
