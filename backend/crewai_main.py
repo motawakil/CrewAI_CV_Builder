@@ -62,7 +62,7 @@ class JobAnalysisResult(BaseModel):
     summary: str
     purpose: str
     seniority: str
-    required_skills: List[str]
+    required_skills: List[str] = Field(default_factory=list)
     local_context: str
     hiring_advice: str
 
@@ -70,6 +70,7 @@ class CVModel(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    headline: Optional[str] = None           # NEW: short job-adapted headline
     summary: Optional[str] = None
     experience: List[Dict[str, Any]] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
@@ -77,6 +78,7 @@ class CVModel(BaseModel):
     languages: List[str] = Field(default_factory=list)
     certifications: List[str] = Field(default_factory=list)
     other: Dict[str, Any] = Field(default_factory=dict)
+
 
 # ----------------------
 # Helpers
@@ -157,69 +159,140 @@ class GeminiClient:
 # ----------------------
 # Agent with three tasks
 # ----------------------
+
+cv_languages = ["fr", "en"]
+
 class Agent:
-    def __init__(self, llm_client: Optional[GeminiClient] = None):
+    def __init__(self, llm_client: Optional[Any] = None):
+        """
+        llm_client is expected to have a .generate(prompt, **kwargs) -> str method.
+        """
         self.llm = llm_client
 
+    # -----------------------
+    # Utility helpers
+    # -----------------------
+    def _sanitize_forbidden(self, text: str) -> str:
+        if not text:
+            return text or ""
+        forbidden = ["estimated", "estimate", "approx", "approximate", "approximately"]
+        out = text
+        for w in forbidden:
+            # remove whole-word occurrences case-insensitively
+            out = out.replace(w, "")
+            out = out.replace(w.capitalize(), "")
+            out = out.replace(w.upper(), "")
+        return out
+
+    def _choose_most_relevant_skills(self, candidate_skills: List[str], job_skills: List[str], max_n: int = 8) -> List[str]:
+        if not candidate_skills:
+            return []
+        cand = [str(s).strip() for s in candidate_skills if s and str(s).strip()]
+        job = [str(s).strip() for s in (job_skills or []) if s and str(s).strip()]
+        selected = []
+
+        # 1) pick skills that match job skills (job skill appears in candidate skill or vice-versa)
+        for j in job:
+            if len(selected) >= max_n:
+                break
+            for c in cand:
+                if c in selected:
+                    continue
+                # simple containment match, case-insensitive
+                if j.lower() in c.lower() or c.lower() in j.lower():
+                    selected.append(c)
+                    break
+
+        # 2) fallback: best remaining candidate skills (preserve original order)
+        for c in cand:
+            if len(selected) >= max_n:
+                break
+            if c not in selected:
+                selected.append(c)
+
+        return selected[:max_n]
+
+    # -----------------------
+    # Task 1: Build Profile
+    # -----------------------
     def task_build_profile(self, profile_json_path: str, pdf_path: str) -> ProfileResult:
-        # Read profile JSON
+        # load profile json
         if not os.path.exists(profile_json_path):
             raise FileNotFoundError(profile_json_path)
         with open(profile_json_path, "r", encoding="utf-8") as f:
             profile = json.load(f)
 
-        # Extract pdf text
+        # extract pdf text (helper provided by your codebase)
         pdf_text = extract_text_from_pdf(pdf_path)
-        logger.info(f"PDF text preview (first 1000 chars):\n{pdf_text[:1000] if pdf_text else 'No text extracted'}")
+        logger.info(f"task_build_profile: PDF excerpt (first 1000 chars):\n{(pdf_text or '')[:1000]}")
 
         write_debug_file("task1_profile.json", json.dumps(profile, ensure_ascii=False, indent=2))
-        write_debug_file("task1_pdf_excerpt.txt", pdf_text[:6000])
+        write_debug_file("task1_pdf_excerpt.txt", (pdf_text or "")[:6000])
 
-        # Build prompt
+        # Prompt: strict instructions, forbid uncertain words
         prompt = (
-            "You are a very detail-oriented AI assistant. Your goal is to extract **all possible information** from the candidate profile.\n"
-            "Use both the JSON profile and the PDF resume text.\n"
-            "Do not skip any fields, even if missing in JSON. If a field is missing, mark it as 'Unknown' or empty.\n\n"
-            "Required JSON keys (extract everything, even study, interests, hobbies, certificates, projects, etc.):\n"
-            "- name (full name)\n"
-            "- email\n"
-            "- phone\n"
-            "- top_skills (list)\n"
-            "- top_roles (list)\n"
-            "- education (list of strings)\n"
-            "- languages (list)\n"
-            "- studies (list)\n"
-            "- interests (list)\n"
-            "- certificates (list)\n"
-            "- projects (list)\n"
-            "- other (dict)\n\n"
-            "First, write a concise 3-5 sentence paragraph summarizing the candidate. "
-            "Then, on a new line, write the JSON object with all keys exactly as listed.\n\n"
-            "PROFILE JSON:\n" + json.dumps(profile, ensure_ascii=False) + "\n\n"
+            "You are an expert HR extractor. Extract all candidate details from the provided JSON and PDF text.\n\n"
+            "RULES:\n"
+            "- Return EXACTLY: first a concise professional summary (3-5 sentences) tailored to a hiring manager, then a JSON object on the next line.\n"
+            "- DO NOT include the words 'estimated', 'approx', 'approximate', 'approximately' or synonyms in ANY output.\n"
+            "- If a field is missing, set it to an empty value or 'Unknown'.\n"
+            "- top_skills should contain ONLY the most relevant skills (not dozens); limit to a reasonable number.\n\n"
+            "EXPECTED JSON KEYS:\n"
+            "name, email, phone, top_skills (list), top_roles (list), education (list of strings), languages (list), "
+            "studies (list), interests (list), certificates (list), projects (list), other (dict)\n\n"
+            "SOURCE PROFILE JSON:\n" + json.dumps(profile, ensure_ascii=False) + "\n\n"
             "PDF TEXT (excerpt):\n" + (pdf_text[:5000] if pdf_text else "") + "\n\n"
-            "Return EXACTLY the paragraph, then JSON (no extra commentary)."
+            "Return the summary paragraph, then the JSON. Nothing else."
         )
 
-
-        generated = self.llm.generate(prompt) if self.llm else ""
-        write_debug_file("task1_raw_llm.txt", generated or "")
-        logger.info(f"Task1: LLM returned {len(generated or '')} chars")
-
-        extracted_json = safe_json_load_from_text(generated or "")
-        paragraph = ""
-        if extracted_json is None:
-            # if parsing failed, treat full response as paragraph only
-            paragraph = (generated or "").strip()
-            extracted_json = {}
-            write_debug_file("task1_llm_unparsed.txt", generated or "")
-            logger.warning("Task1: Could not parse JSON from LLM; saved raw output for inspection.")
+        # Call LLM
+        if self.llm:
+            # if your client accepts generation params, pass them (ex: temperature=0)
+            # generated = self.llm.generate(prompt, temperature=0)
+            generated = self.llm.generate(prompt)
         else:
-            # attempt to isolate paragraph (text before JSON start)
-            idx = (generated or "").rfind("{")
-            paragraph = (generated or "")[:idx].strip() if idx != -1 else ""
+            generated = ""
 
-        return ProfileResult(paragraph=paragraph, extracted=extracted_json, pdf_preview=(pdf_text[:1000] if pdf_text else None))
+        write_debug_file("task1_raw_llm.txt", generated or "")
+        logger.info(f"task_build_profile: LLM returned {len(generated or '')} chars")
 
+        # sanitize and parse
+        sanitized = self._sanitize_forbidden(generated or "")
+        extracted_json = safe_json_load_from_text(sanitized)
+        paragraph = ""
+
+        if extracted_json is None:
+            # fallback: attempt to split by first JSON brace
+            idx = (sanitized).rfind("{")
+            if idx != -1:
+                paragraph = sanitized[:idx].strip()
+                try:
+                    extracted_json = json.loads(sanitized[idx:])
+                except Exception:
+                    extracted_json = {}
+            else:
+                paragraph = sanitized.strip()
+                extracted_json = {}
+            write_debug_file("task1_llm_unparsed.txt", generated or "")
+            logger.warning("task_build_profile: Could not parse JSON from LLM cleanly; saved raw output.")
+        else:
+            # isolate paragraph (text before first json object)
+            idx = (sanitized).rfind("{")
+            paragraph = sanitized[:idx].strip() if idx != -1 else ""
+
+        # normalize and trim top_skills
+        if isinstance(extracted_json.get("top_skills"), list):
+            extracted_json["top_skills"] = [str(x).strip() for x in extracted_json["top_skills"] if x][:8]
+
+        return ProfileResult(
+            paragraph=paragraph,
+            extracted=extracted_json or {},
+            pdf_preview=(pdf_text[:1000] if pdf_text else None)
+        )
+
+    # -----------------------
+    # Task 2: Analyze Job
+    # -----------------------
     def task_analyze_job(self, jobs_json_path: str) -> JobAnalysisResult:
         if not os.path.exists(jobs_json_path):
             raise FileNotFoundError(jobs_json_path)
@@ -235,29 +308,36 @@ class Agent:
             except Exception:
                 return datetime.datetime.min
 
-
         latest = sorted(jobs, key=parse_dt)[-1]
-
         write_debug_file("task2_latest_job.json", json.dumps(latest, ensure_ascii=False, indent=2))
 
         prompt = (
-            "You are a senior recruiter and analyst. Read the job posting below and return a JSON object with these keys:\n"
-            "summary (1-2 sentences), purpose, seniority (Junior/Mid/Senior), required_skills (list), local_context, hiring_advice.\n"
-            "Return only the JSON object.\n\n"
+            "You are a senior recruiter and analyst. Read the job posting and return ONLY a JSON object with keys:\n"
+            "summary (1-2 sentences), purpose, seniority (Junior/Mid/Senior), required_skills (list - include only the MOST important 6 or fewer), local_context, hiring_advice.\n"
+            "RULES:\n"
+            "- Do NOT use 'estimated', 'approx', 'approximate' or similar words.\n"
+            "- Keep required_skills focused (max 6), the most critical for hiring decisions.\n"
+            "- Return only the JSON object and nothing else.\n\n"
             "JOB POSTING JSON:\n" + json.dumps(latest, ensure_ascii=False) + "\n\n"
         )
 
-        generated = self.llm.generate(prompt) if self.llm else ""
-        write_debug_file("task2_raw_llm.txt", generated or "")
-        logger.info(f"Task2: LLM returned {len(generated or '')} chars")
+        if self.llm:
+            # generated = self.llm.generate(prompt, temperature=0)
+            generated = self.llm.generate(prompt)
+        else:
+            generated = ""
 
-        parsed = safe_json_load_from_text(generated or "")
+        write_debug_file("task2_raw_llm.txt", generated or "")
+        logger.info(f"task_analyze_job: LLM returned {len(generated or '')} chars")
+
+        sanitized = self._sanitize_forbidden(generated or "")
+        parsed = safe_json_load_from_text(sanitized)
+
         if parsed is None:
-            logger.warning("Task2: Could not parse JSON from LLM; saving raw.")
             write_debug_file("task2_llm_unparsed.txt", generated or "")
-            # fallback minimal object
+            logger.warning("task_analyze_job: Could not parse JSON; using fallback structure.")
             parsed = {
-                "summary": (generated or "")[:400],
+                "summary": (sanitized or "")[:300],
                 "purpose": "",
                 "seniority": "Unknown",
                 "required_skills": [],
@@ -265,121 +345,126 @@ class Agent:
                 "hiring_advice": ""
             }
 
+        # Defensive trimming of required_skills
+        req_skills = parsed.get("required_skills") or []
+        if isinstance(req_skills, list):
+            req_skills = [str(s).strip() for s in req_skills if s][:6]
+        else:
+            req_skills = []
+
         return JobAnalysisResult(
             job_id=latest.get("id", -1),
-            summary=parsed.get("summary", ""),
-            purpose=parsed.get("purpose", ""),
-            seniority=parsed.get("seniority", "Unknown"),
-            required_skills=parsed.get("required_skills", []),
-            local_context=parsed.get("local_context", ""),
-            hiring_advice=parsed.get("hiring_advice", "")
+            summary=parsed.get("summary", "") or "",
+            purpose=parsed.get("purpose", "") or "",
+            seniority=parsed.get("seniority", "Unknown") or "Unknown",
+            required_skills=req_skills,
+            local_context=parsed.get("local_context", "") or "",
+            hiring_advice=parsed.get("hiring_advice", "") or ""
         )
 
-    def task_build_cv(self, profile_res: ProfileResult, job_analysis: JobAnalysisResult) -> CVModel:
-        # Build prompt for CV: request strict JSON then markdown delimited
+      # -----------------------
+    # Task 3: Build CV (Enhanced with cv_languages)
+    # -----------------------
+    def task_build_cv(self, profile_res: ProfileResult, job_analysis: JobAnalysisResult, cv_languages: Optional[List[str]] = None) -> CVModel:
+        """
+        Build a complete CV model (JSON + markdown) based on profile and job analysis.
+        Optionally generate it in one or more target languages (e.g., ['fr', 'en']).
+        """
+        # Define the target languages
+        target_langs = cv_languages or ["en"]
+        lang_instruction = ""
+        if len(target_langs) == 1:
+            lang_instruction = f"Write the CV entirely in {target_langs[0].upper()}."
+        else:
+            lang_instruction = (
+                "Generate the CV in multiple languages. "
+                + ", ".join([l.upper() for l in target_langs])
+                + ". Each version should start with '### CV in [LANG]'."
+            )
+
+        # Build prompt
         prompt = (
-            "You are an expert CV writer. Using the PROFILE and JOB ANALYSIS below, produce:\n"
-            "1) A strict JSON object with keys: name, email, phone, summary, experience (list of {title, company, start, end, description}), "
-            "skills (list), education (list of {degree, institution, year}), languages (list), certifications (list), other (dict).\n"
-            "2) On a new line, the marker ---MARKDOWN_CV--- and then a readable markdown CV.\n"
-            "Return exactly the JSON, then the marker, then the markdown.\n\n"
-            "PROFILE PARAGRAPH:\n" + profile_res.paragraph + "\n\n"
-            "PROFILE EXTRACTED:\n" + json.dumps(profile_res.extracted, ensure_ascii=False) + "\n\n"
-            "JOB ANALYSIS:\n" + json.dumps(job_analysis.model_dump(), ensure_ascii=False) + "\n\n"
-            "If you must guess missing dates or fields, append ' (estimated)'."
+            "You are an expert multilingual CV writer. "
+            "Using the PROFILE and JOB ANALYSIS below, produce:\n"
+            "1) A strict JSON object with keys: name, email, phone, headline, summary, "
+            "experience (list of {title, company, start, end, description}), skills (list - only the most relevant, max 8), "
+            "education (list of {degree, institution, year}), languages (list), certifications (list), other (dict).\n"
+            "2) On a NEW LINE, the marker ---MARKDOWN_CV--- and then a readable markdown CV.\n\n"
+            "RULES:\n"
+            f"- {lang_instruction}\n"
+            "- 'headline' should be a short phrase (3–6 words) tailored to the job.\n"
+            "- 'summary' should be professional and adapted to the job posting.\n"
+            "- Avoid uncertain terms like 'estimated' or 'approx'.\n"
+            "- Return exactly: the JSON, then the marker, then the markdown. Nothing else.\n\n"
+            "PROFILE PARAGRAPH:\n" + (profile_res.paragraph or "") + "\n\n"
+            "PROFILE EXTRACTED (JSON):\n" + json.dumps(profile_res.extracted or {}, ensure_ascii=False) + "\n\n"
+            "JOB ANALYSIS (JSON):\n" + json.dumps(job_analysis.model_dump(), ensure_ascii=False) + "\n\n"
         )
 
+        # Generate
         generated = self.llm.generate(prompt) if self.llm else ""
         write_debug_file("task3_raw_llm.txt", generated or "")
-        logger.info(f"Task3: LLM returned {len(generated or '')} chars")
+        logger.info(f"task_build_cv: LLM returned {len(generated or '')} chars")
 
-        # split JSON and markdown
-        json_part = None
+        # Rest of your parsing logic unchanged
+        sanitized = self._sanitize_forbidden(generated or "")
+        json_part = {}
         md_part = ""
-        if generated:
+
+        if sanitized:
             marker = "---MARKDOWN_CV---"
-            if marker in generated:
-                json_text, md_part = generated.split(marker, 1)
+            if marker in sanitized:
+                json_text, md_part = sanitized.split(marker, 1)
                 json_text = json_text.strip()
             else:
-                parsed = safe_json_load_from_text(generated)
-                if parsed is not None:
-                    json_part = parsed
-                    md_part = ""
-                else:
-                    json_text = "{}"
-            if json_part is None:
-                if 'json_text' in locals():
-                    try:
-                        json_part = json.loads(json_text)
-                    except Exception:
-                        json_part = safe_json_load_from_text(json_text) or {}
-                        write_debug_file("task3_failed_json.txt", json_text)
+                json_text = sanitized.strip()
+
+            parsed = safe_json_load_from_text(json_text)
+            json_part = parsed or {}
         else:
             json_part = {}
 
-        # Validate into CVModel
-        try:
-            cv = CVModel(**(json_part or {}))
-        except ValidationError as e:
-            logger.warning(f"Task3: Validation error building CVModel: {e}. Using tolerant fields.")
-            cv = CVModel(
-                name=(json_part or {}).get("name"),
-                email=(json_part or {}).get("email"),
-                phone=(json_part or {}).get("phone"),
-                summary=(json_part or {}).get("summary") or profile_res.paragraph,
-                experience=(json_part or {}).get("experience", []),
-                skills=(json_part or {}).get("skills", []),
-                education=(json_part or {}).get("education", []),
-                languages=(json_part or {}).get("languages", []),
-                certifications=(json_part or {}).get("certifications", []),
-                other=(json_part or {}).get("other", {})
-            )
+        # Select best skills based on job analysis
+        reduced_skills = self._choose_most_relevant_skills(
+            json_part.get("skills", []),
+            job_analysis.required_skills,
+            max_n=8
+        )
 
-        # -------------------------------
-        # 🗂️ Create output directory safely
-        # -------------------------------
+        # Build validated CV
+        candidate = {
+            "name": json_part.get("name"),
+            "email": json_part.get("email"),
+            "phone": json_part.get("phone"),
+            "headline": json_part.get("headline"),
+            "summary": json_part.get("summary") or profile_res.paragraph,
+            "experience": json_part.get("experience", []),
+            "skills": reduced_skills,
+            "education": json_part.get("education", []),
+            "languages": json_part.get("languages", target_langs),
+            "certifications": json_part.get("certifications", []),
+            "other": json_part.get("other", {}),
+        }
+
+        # Validate with Pydantic
+        try:
+            cv = CVModel(**candidate)
+        except ValidationError as e:
+            logger.warning(f"CV validation failed: {e}")
+            cv = CVModel(**{k: v for k, v in candidate.items() if k in CVModel.model_fields})
+
+        # Save both JSON and Markdown outputs
         output_dir = Path("backend/stored_cvs")
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create filenames based on name or fallback
         base_name = (cv.name or "cv_unnamed").replace(" ", "_")
+
         json_path = output_dir / f"{base_name}.json"
         md_path = output_dir / f"{base_name}.md"
 
-        # Save JSON
-        try:
-            json_path.write_text(cv.model_dump_json(indent=2, ensure_ascii=False), encoding="utf-8")
-            logger.info(f"Saved CV JSON: {json_path}")
-        except Exception as e:
-            logger.error(f"Failed saving CV JSON: {e}")
+        json_path.write_text(cv.model_dump_json(indent=2, ensure_ascii=False), encoding="utf-8")
+        md_path.write_text(md_part.strip() or "No Markdown output.", encoding="utf-8")
 
-        # Save markdown
-        try:
-            if md_part and md_part.strip():
-                md_path.write_text(md_part.strip(), encoding="utf-8")
-            else:
-                with md_path.open("w", encoding="utf-8") as f:
-                    f.write(f"# {cv.name or 'Candidate'}\n\n")
-                    if cv.email: f.write(f"- Email: {cv.email}\n")
-                    if cv.phone: f.write(f"- Phone: {cv.phone}\n")
-                    f.write("\n## Summary\n\n")
-                    f.write((cv.summary or "") + "\n\n")
-                    f.write("## Skills\n\n")
-                    for s in cv.skills:
-                        f.write(f"- {s}\n")
-                    f.write("\n## Experience\n\n")
-                    for e in cv.experience:
-                        f.write(f"**{e.get('title','')}**, {e.get('company','')}\n\n{e.get('description','')}\n\n")
-            logger.info(f"Saved CV Markdown: {md_path}")
-        except Exception as e:
-            logger.error(f"Failed saving CV Markdown: {e}")
-
-        # Debug if empty
-        if not cv.name and not cv.email and not cv.skills:
-            write_debug_file("task3_cv_empty_notice.txt", "CV appears empty. Check task3_raw_llm.txt and task3_failed_json.txt for details.")
-            logger.warning("Generated CV seems to be missing main fields. See debug_outputs/ for details.")
-
+        logger.info(f"✅ Saved multilingual CV ({', '.join(target_langs)}): {json_path} / {md_path}")
         return cv
 
 
@@ -548,6 +633,7 @@ def run_job_analyzer():
 
     # Step 3 - build CV
     def step3(state):
+
         prof = state.get("step1_build_profile")
         job = state.get("step2_analyze_job")
 
@@ -557,6 +643,7 @@ def run_job_analyzer():
             job = agent.task_analyze_job(JOBS_JSON)
 
         return agent.task_build_cv(prof, job)
+    
 
     p.add_step("step3_build_cv", step3)
 
