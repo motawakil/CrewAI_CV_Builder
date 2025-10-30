@@ -4,8 +4,10 @@
 
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-latest-green)
+![CrewAI](https://img.shields.io/badge/CrewAI-integrated-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen)
+
 
 **An open-source AI-powered CV generator that creates perfectly tailored resumes in seconds using CrewAI multi-agent system.**
 
@@ -248,6 +250,7 @@ CREWAI_PROJET/
 - **[Uvicorn](https://www.uvicorn.org/)** - ASGI server
 - **[Pydantic](https://docs.pydantic.dev/)** - Data validation (v2)
 - **[Python-dotenv](https://pypi.org/project/python-dotenv/)** - Environment management
+- **[CrewAI](https://www.crewai.com/)** - Multi-agent orchestration framework for LLM workflows  
 
 ### AI & Processing
 - **[Google Gemini](https://deepmind.google/technologies/gemini/)** (gemini-2.0-flash) - Primary LLM
@@ -586,9 +589,7 @@ threading.Thread(target=run_job_analyzer, daemon=True).start()
 This project is licensed under the **MIT License**.
 
 ```
-MIT License
-
-Copyright (c) 2025 Motaouakel El Maimouni
+Copyright (c) 2025 Guicor Advirsory
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
