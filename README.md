@@ -1,6 +1,6 @@
 # 🧠 CrewAI CV Project
 
-This project is an AI-powered CV generator and job analyzer built with **FastAPI**, **CrewAI**, and **Gemini/LLM agents**.  
+This project is an AI-powered CV generator and job analyzer built with **CrewAI**, **FastAPI**, and **Gemini/LLM agents**.  
 It analyzes job descriptions, generates tailored CVs dynamically as PDFs, and supports multi-step AI agent workflows.
 
 ---
