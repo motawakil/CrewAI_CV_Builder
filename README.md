@@ -286,8 +286,8 @@ CREWAI_PROJET/
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/motawakil/CrewAI_CV_Project.git
-cd CrewAI_CV_Project
+ git clone https://github.com/motawakil/CrewAI_Projet.git
+cd CrewAI_Projet  
 ```
 
 ### Step 2: Create Virtual Environment
@@ -308,6 +308,9 @@ source venv/bin/activate
 
 ```bash
 pip install -r requirements.txt
+pip install "crewai[google-genai]"
+pip install -U crewai python-dotenv
+
 ```
 
 **Key packages installed:**
@@ -323,7 +326,7 @@ pillow
 python-multipart
 ```
 
-### Step 4: Create Directories
+### Step 4: Create Directories (if not exist!)
 
 ```bash
 mkdir -p backend/utils backend/uploads/photos backend/stored_cvs debug_outputs
@@ -332,9 +335,18 @@ mkdir -p backend/utils backend/uploads/photos backend/stored_cvs debug_outputs
 ### Step 5: Configure API Keys
 
 Create a `.env` file in the project root:
-
+add the following lines 
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=
+MODEL=gemini/gemini-2.0-flash
+
+CREWAI_TRACING_ENABLED=true
+
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+SERPAPI_API_KEY=
+CUSTOMSEARCH_API_KEY=
+
 ```
 
 **Or configure via web interface after starting the app.**
